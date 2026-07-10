@@ -67,7 +67,7 @@ function getToneClass(tone: string) {
 export default function Home() {
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
-      <div className="mx-auto bg-green-200 flex w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto bg-slate-50 flex w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-4 border-b border-slate-200 pb-6 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-sm font-medium uppercase tracking-wide text-slate-500">

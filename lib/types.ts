@@ -42,10 +42,25 @@ export type PortfolioSummary = {
   totalGainLossPercent: number | null;
 };
 
+export type MarketDataStatus =
+  | "fully-live"
+  | "partial-fallback"
+  | "fully-fallback"
+  | "unavailable";
+
+export type MarketDataSummary = {
+  total: number;
+  live: number;
+  fallback: number;
+  unavailable: number;
+};
+
 export type PortfolioApiResponse = {
   rows: PortfolioRow[];
   sectors: SectorSummary[];
   summary: PortfolioSummary;
   lastUpdated: string;
+  marketDataStatus: MarketDataStatus;
+  marketDataSummary: MarketDataSummary;
   warning?: string;
 };

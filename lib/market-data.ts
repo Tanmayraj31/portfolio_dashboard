@@ -1,8 +1,10 @@
 import YahooFinance from "yahoo-finance2";
 
+import { getCachedMarketData, setCachedMarketData } from "./cache";
 import type { Holding, MarketData } from "./types";
 
 const yahooFinance = new YahooFinance();
+const MARKET_DATA_CACHE_TTL_MS = 60 * 1000;
 
 const yahooSymbolOverrides: Record<string, string> = {
   "532174": "ICICIBANK.NS",
@@ -66,6 +68,12 @@ async function getMarketDataForHolding(
   holding: Holding,
   updatedAt: string,
 ): Promise<[string, MarketData]> {
+  const cachedMarketData = getCachedMarketData(holding.symbol);
+
+  if (cachedMarketData) {
+    return [holding.symbol, cachedMarketData];
+  }
+
   const yahooSymbols = getYahooSymbolCandidates(holding.symbol);
 
   for (const yahooSymbol of yahooSymbols) {
@@ -79,22 +87,31 @@ async function getMarketDataForHolding(
         continue;
       }
 
-      return [
-        holding.symbol,
-        {
-          cmp: quote.regularMarketPrice,
-          peRatio: quote.trailingPE ?? null,
-          latestEarnings: null,
-          source: `yahoo-finance:${yahooSymbol}`,
-          updatedAt,
-        },
-      ];
+      const marketData: MarketData = {
+        cmp: quote.regularMarketPrice,
+        peRatio: quote.trailingPE ?? null,
+        latestEarnings: null,
+        source: `yahoo-finance:${yahooSymbol}`,
+        updatedAt,
+      };
+
+      setCachedMarketData(holding.symbol, marketData, MARKET_DATA_CACHE_TTL_MS);
+
+      return [holding.symbol, marketData];
     } catch {
       continue;
     }
   }
 
-  return [holding.symbol, getFallbackMarketData(holding, updatedAt)];
+  const fallbackMarketData = getFallbackMarketData(holding, updatedAt);
+
+  setCachedMarketData(
+    holding.symbol,
+    fallbackMarketData,
+    MARKET_DATA_CACHE_TTL_MS,
+  );
+
+  return [holding.symbol, fallbackMarketData];
 }
 
 export async function getMarketDataForHoldings(holdings: Holding[]) {

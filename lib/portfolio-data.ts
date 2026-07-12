@@ -53,7 +53,7 @@ export const holdings: Holding[] = [
     id: "lti-mindtree",
     sector: "Tech Sector",
     name: "LTI Mindtree",
-    symbol: "LTIM",
+    symbol: "LTM",
     purchasePrice: 4775,
     quantity: 16,
   },

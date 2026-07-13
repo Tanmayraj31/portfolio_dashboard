@@ -7,6 +7,9 @@ import { SectorSummary } from "@/components/SectorSummary";
 import { SummaryCards } from "@/components/SummaryCards";
 import type { PortfolioApiResponse } from "@/lib/types";
 
+const REFRESH_INTERVAL_MS = 15 * 1000;
+const MIN_REFRESH_INDICATOR_MS = 700;
+
 function formatDateTime(value: string | null | undefined) {
   if (!value) {
     return "N/A";
@@ -18,15 +21,25 @@ function formatDateTime(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 export function PortfolioDashboard() {
   const [data, setData] = useState<PortfolioApiResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadPortfolio = useCallback(async () => {
+  const loadPortfolio = useCallback(async (background = false) => {
+    const refreshStartedAt = Date.now();
+
     try {
-      setLoading(true);
-      setError(null);
+      if (background) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
 
       const response = await fetch("/api/portfolio");
 
@@ -36,10 +49,26 @@ export function PortfolioDashboard() {
 
       const portfolioData = (await response.json()) as PortfolioApiResponse;
       setData(portfolioData);
+      setError(null);
     } catch {
-      setError("Unable to load portfolio data. Please try again.");
+      setError(
+        background
+          ? "Unable to refresh portfolio data. Showing the last successful data."
+          : "Unable to load portfolio data. Please try again.",
+      );
     } finally {
-      setLoading(false);
+      if (background) {
+        const elapsedMs = Date.now() - refreshStartedAt;
+        const remainingMs = Math.max(
+          0,
+          MIN_REFRESH_INDICATOR_MS - elapsedMs,
+        );
+
+        await wait(remainingMs);
+      }
+
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -48,7 +77,14 @@ export function PortfolioDashboard() {
       loadPortfolio();
     }, 0);
 
-    return () => window.clearTimeout(timeoutId);
+    const intervalId = window.setInterval(() => {
+      loadPortfolio(true);
+    }, REFRESH_INTERVAL_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.clearInterval(intervalId);
+    };
   }, [loadPortfolio]);
 
   return (
@@ -72,30 +108,36 @@ export function PortfolioDashboard() {
           </div>
         </header>
 
-        {loading ? (
+        {isLoading ? (
           <section className="rounded-md border border-slate-700 bg-slate-900 p-6 shadow-sm shadow-slate-950">
             <p className="text-sm font-medium text-slate-200">
               Loading portfolio data...
             </p>
           </section>
-        ) : error ? (
+        ) : error && !data ? (
           <section className="rounded-md border border-rose-400 bg-rose-950 p-6 shadow-sm shadow-slate-950">
             <p className="text-sm font-medium text-rose-100">{error}</p>
             <button
               className="mt-4 rounded-md border border-rose-300 bg-rose-900 px-3 py-2 text-sm font-medium text-rose-50 hover:bg-rose-800"
               type="button"
-              onClick={loadPortfolio}
+              onClick={() => loadPortfolio()}
             >
               Retry
             </button>
           </section>
         ) : data ? (
           <>
+            {error ? (
+              <section className="rounded-md border border-amber-400 bg-amber-950 px-4 py-3 text-sm font-medium text-amber-100 shadow-sm shadow-slate-950">
+                {error}
+              </section>
+            ) : null}
             <SummaryCards summary={data.summary} />
             <section className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
               <SectorSummary sectors={data.sectors} />
               <PortfolioTable
-                onRefresh={loadPortfolio}
+                isRefreshing={isRefreshing}
+                onRefresh={() => loadPortfolio(true)}
                 rows={data.rows}
                 warning={data.warning}
               />

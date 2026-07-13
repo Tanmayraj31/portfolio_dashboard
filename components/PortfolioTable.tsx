@@ -12,6 +12,7 @@ import type { PortfolioRow } from "@/lib/types";
 type PortfolioTableProps = {
   rows: PortfolioRow[];
   onRefresh: () => void;
+  isRefreshing: boolean;
   warning?: string;
 };
 
@@ -28,6 +29,7 @@ function getToneClass(value: number | null | undefined) {
 export function PortfolioTable({
   rows,
   onRefresh,
+  isRefreshing,
   warning,
 }: PortfolioTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,11 +63,12 @@ export function PortfolioTable({
         </div>
 
         <button
-          className="rounded-md border border-cyan-500 bg-cyan-950 px-3 py-2 text-sm font-medium text-cyan-100 hover:bg-cyan-900"
+          className="rounded-md border border-cyan-500 bg-cyan-950 px-3 py-2 text-sm font-medium text-cyan-100 hover:bg-cyan-900 disabled:cursor-not-allowed disabled:opacity-60"
           type="button"
+          disabled={isRefreshing}
           onClick={onRefresh}
         >
-          Refresh
+          {isRefreshing ? "Refreshing..." : "Refresh"}
         </button>
       </div>
 
